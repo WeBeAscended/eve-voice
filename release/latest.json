@@ -1,0 +1,8 @@
+{
+  "version": "1.0.1",
+  "url": "eve-voice-1.0.1.zip",
+  "sha256": "8df976568572cab18715e196dfc9d6262057b2c5e5abeff95918906d9d9d39bd",
+  "size": 163121,
+  "notes": "Holds up to 10s, 'gate' command, faster response, say 'warp gate' as two commands",
+  "min_updater_version": 1
+}

@@ -1,0 +1,7 @@
+# Windows scripts need CRLF
+*.bat text eol=crlf
+# signed release assets must stay byte-exact
+release/** -text -diff
+*.zip binary
+*.wav binary
+*.png binary

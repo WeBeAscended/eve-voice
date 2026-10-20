@@ -1,0 +1,72 @@
+# Publishes the signed assets that tools/make_release.py committed under release/.
+# Signing happens only on the publisher's machine; this workflow never sees the private key.
+name: Release
+
+on:
+  push:
+    branches: [main]
+    paths: [release/latest.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read and check release/latest.json
+        id: meta
+        run: |
+          python3 - <<'PY' >> "$GITHUB_OUTPUT"
+          import hashlib, json, os, re, sys
+          m = json.load(open("release/latest.json"))
+          v = m["version"]
+          if not re.fullmatch(r"\d+\.\d+\.\d+", v):
+              sys.exit(f"bad version {v!r}")
+          zip_path = os.path.join("release", os.path.basename(m["url"]))
+          data = open(zip_path, "rb").read()
+          if hashlib.sha256(data).hexdigest() != m["sha256"] or len(data) != m["size"]:
+              sys.exit(f"{zip_path} does not match latest.json (sha256/size)")
+          if not os.path.exists("release/latest.json.sig"):
+              sys.exit("release/latest.json.sig missing")
+          src = open("version.py").read()
+          if f'VERSION = "{v}"' not in src:
+              sys.exit(f"version.py does not say {v}")
+          notes = m.get("notes") or f"Release {v}"
+          with open("release_notes.md", "w") as f:
+              f.write(notes + "\n")
+          print(f"version={v}")
+          print(f"zip={zip_path}")
+          PY
+
+      - name: Skip if the tag already exists
+        id: tag
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if git ls-remote --exit-code --tags origin "refs/tags/v${{ steps.meta.outputs.version }}" >/dev/null; then
+            echo "v${{ steps.meta.outputs.version }} already exists - nothing to do"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create GitHub Release
+        if: steps.tag.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "v${{ steps.meta.outputs.version }}" \
+            "${{ steps.meta.outputs.zip }}" release/latest.json release/latest.json.sig \
+            --repo "${{ github.repository }}" \
+            --target "${{ github.sha }}" \
+            --title "EVE Voice ${{ steps.meta.outputs.version }}" \
+            --notes-file release_notes.md \
+            --latest

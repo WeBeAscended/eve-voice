@@ -1,0 +1,41 @@
+# --- signing keys: NEVER commit (signing happens on the publisher's machine only) ---
+*.pem
+*.key
+private_key*
+eve-voice-signing/
+
+# --- Python / environments ---
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+env/
+
+# --- speech models (downloaded by setup.bat / the app) ---
+model/
+model-*/
+vosk-model*/
+*.zip.part
+*.part
+
+# --- user files (created on the user's machine; commands.default.json is the shipped config) ---
+commands.json
+commands.json.*
+commands-*.json
+gui_state.json
+.defaults_merged.json
+*.log
+*.log.*
+what_it_sees.png
+screenshots/
+
+# --- updater state on installed copies ---
+update_staging/
+previous_version/
+update_pending.json
+update_state.json
+update.log
+
+# --- build leftovers (release/ IS committed: signed assets for the Release workflow) ---
+*.tmp
+/eve-voice.zip

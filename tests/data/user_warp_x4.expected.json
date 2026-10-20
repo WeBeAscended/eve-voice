@@ -1,0 +1,113 @@
+{
+ "source": "user's recording (m4a, 48 kHz stereo) converted with: ffmpeg -i in.m4a -ac 1 -ar 16000 -sample_fmt s16 user_warp_x4.wav",
+ "duration_s": 8.21,
+ "content": "'warp' said 4 times; no other phrases, no game noise segment",
+ "background_peak_max": 0.03,
+ "speech_peak_range": [
+  0.33,
+  0.52
+ ],
+ "utterances": [
+  {
+   "said": "warp",
+   "start": 1.41,
+   "end": 1.86
+  },
+  {
+   "said": "warp",
+   "start": 2.91,
+   "end": 3.45
+  },
+  {
+   "said": "warp",
+   "start": 4.53,
+   "end": 5.04
+  },
+  {
+   "said": "warp",
+   "start": 6.84,
+   "end": 7.32
+  }
+ ],
+ "results": {
+  "small_full_vocab": [
+   [
+    "warp",
+    0.54
+   ],
+   [
+    "warp",
+    1.0
+   ],
+   [
+    "warp",
+    1.0
+   ],
+   [
+    "warp",
+    0.89
+   ]
+  ],
+  "small_grammar": [
+   [
+    "warp",
+    1.0
+   ],
+   [
+    "warp",
+    1.0
+   ],
+   [
+    "warp",
+    1.0
+   ],
+   [
+    "warp",
+    1.0
+   ]
+  ],
+  "accurate_full_vocab": [
+   [
+    "warp",
+    1.0
+   ],
+   [
+    "warp",
+    1.0
+   ],
+   [
+    "warp",
+    1.0
+   ],
+   [
+    "warp",
+    1.0
+   ]
+  ],
+  "accurate_grammar": [
+   [
+    "warp",
+    1.0
+   ],
+   [
+    "warp",
+    1.0
+   ],
+   [
+    "warp",
+    1.0
+   ],
+   [
+    "warp",
+    1.0
+   ]
+  ]
+ },
+ "expected_presses": [
+  "d",
+  "d",
+  "d",
+  "d"
+ ],
+ "max_latency_after_word_end_s": 0.6
+}
