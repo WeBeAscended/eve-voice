@@ -66,6 +66,9 @@ class TestHolds(unittest.TestCase):
         app.hold.tick(); app.hold.tick(); app.hold.tick()   # up, down, down (user pressing)
         self.assertEqual(s.ups, [])
         app.hold.tick()                                     # user let go of the button
+        self.assertEqual(s.ups, [])                         # still held so EVE sees Ctrl+click
+        clock.t += 0.1; app.hold.tick(); self.assertEqual(s.ups, [])
+        clock.t += 0.06; app.hold.tick()                    # CLICK_SETTLE passed
         self.assertEqual(s.ups, ["ctrl"])
         self.assertIn("  released Ctrl (you clicked)", logs)
         self.assertEqual([c for c in app.rec.calls if c[0] == "mouse"], [])   # the tool never clicks
@@ -78,6 +81,7 @@ class TestHolds(unittest.TestCase):
         app.hold.tick(); app.hold.tick()        # still down from before, then up: only arms
         self.assertEqual(s.ups, [])
         app.hold.tick(); app.hold.tick()        # a real click
+        clock.t += 0.2; app.hold.tick()
         self.assertEqual(s.ups, ["q"])
 
     def test_until_click_timeout(self):
@@ -124,9 +128,11 @@ class TestHolds(unittest.TestCase):
         app.handle_text("lock"); app.handle_text("high one")
         self.assertEqual((s.sent, s.ups), (["ctrl", "f1"], ["ctrl"]))
         self.assertIn("  released Ctrl (before 'high one')", logs)
-        app.handle_text("warp"); app.handle_text("select")       # a tool click
-        self.assertEqual(s.ups, ["ctrl", "d"])
+        app.handle_text("warp"); app.handle_text("select")       # a tool click: D stays down for it
+        self.assertEqual(s.ups, ["ctrl"])
         self.assertEqual(app.rec.calls[-1][0], "mouse")
+        clock.t += 0.2; app.hold.tick()                          # ...and is let go just after
+        self.assertEqual(s.ups, ["ctrl", "d"])
 
     def test_focus_loss_releases(self):
         title = {"t": "EVE - Spence"}
@@ -134,6 +140,11 @@ class TestHolds(unittest.TestCase):
         app.handle_text("warp")
         app.hold.tick(); self.assertEqual(s.ups, [])
         title["t"] = "Discord"; app.hold.tick()
+        self.assertEqual(s.ups, [])                     # a short focus blip doesn't let go
+        title["t"] = "EVE - Spence"; clock.t += 0.3; app.hold.tick()
+        title["t"] = "Discord"; clock.t += 0.3; app.hold.tick()
+        self.assertEqual(s.ups, [])
+        clock.t += 0.5; app.hold.tick()
         self.assertEqual(s.ups, ["d"])
         self.assertIn("  released D (EVE lost focus)", logs)
 

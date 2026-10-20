@@ -1519,7 +1519,11 @@ class HoldManager:
     phrase, the safety max, EVE losing focus, Stop, a config/mode change, or exit.
     Runs a small timer thread so the listener keeps working while the key is down."""
 
-    POLL = 0.01
+    POLL = 0.005          # 5 ms button polling: even a very quick click (~30 ms) is seen
+    CLICK_SETTLE = 0.15   # after the click is finished (button UP), keep the key down this much longer
+                          # so EVE (which reads keys once per frame) sees key+click together.
+                          # It's the end of the SAME held key - never a new input, never a sleep.
+    FOCUS_GRACE = 0.4     # a blip in the foreground window (focus change, alt-tab flash) doesn't let go
 
     def __init__(self, app: "VoiceApp", clock: Callable[[], float] = time.monotonic,
                  left_button: Optional[Callable[[], Optional[bool]]] = None,
@@ -1546,7 +1550,8 @@ class HoldManager:
 
     def start(self, cmd: "Command", hwnd: Optional[int] = None) -> None:
         with self.lock:
-            if self.active is not None:
+            a = self.active
+            if a is not None:
                 # releasing YOUR earlier held key (its keyUp) - not a second action
                 self.release(f"you started holding {self.label(cmd)}")
             if hwnd is not None:
@@ -1558,7 +1563,8 @@ class HoldManager:
             self.token += 1
             self.active = {"cmd": cmd, "label": self.label(cmd), "hwnd": hwnd, "mode": cmd.hold_mode,
                            "start": now, "deadline": now + float(cmd.hold_seconds), "token": self.token,
-                           "armed": not lb, "seen_down": False}
+                           "armed": not lb, "seen_down": False, "release_at": None, "why": "",
+                           "unfocused_since": None}
             lbl, secs = self.active["label"], float(cmd.hold_seconds)
             msg = {"timed": f"holding {lbl} for {secs:.1f}s",
                    "click": f"holding {lbl} - click your target (max {secs:g}s)",
@@ -1586,21 +1592,39 @@ class HoldManager:
             if a is None:
                 return
             app = self.app
+            now = self.clock()
             if a["hwnd"] is None and app.cfg.target.get("mode") != "background_window" and not app.eve_focused():
-                self.release("EVE lost focus")
+                if a["unfocused_since"] is None:
+                    a["unfocused_since"] = now
+                if now - a["unfocused_since"] >= self.FOCUS_GRACE:
+                    self.release("EVE lost focus")
+                    return
+            else:
+                a["unfocused_since"] = None
+            if a["release_at"] is not None:            # click finished: let go once EVE has seen it
+                if now >= a["release_at"]:
+                    self.release(a["why"])
                 return
             if a["mode"] == "click":
-                lb = self.left_button()
+                lb = self.left_button()   # 'is it down NOW' (0x8000 bit only, never the 'pressed since' bit)
                 if lb is not None:
                     if not a["armed"]:
                         a["armed"] = not lb          # button was already down at the start: wait for it up
                     elif lb:
-                        a["seen_down"] = True
+                        a["seen_down"] = True        # a fresh press that started after the hold began
                     elif a["seen_down"]:
-                        self.release("you clicked")
+                        self.click_done("you clicked")   # down AND back up = the click is finished
                         return
-            if self.clock() >= a["deadline"]:
+            if now >= a["deadline"]:
                 self.release("time's up" if a["mode"] == "timed" else "safety limit reached")
+
+    def click_done(self, why: str) -> None:
+        """A click on the target has finished (down + up). Hold-until-click lets go
+        CLICK_SETTLE later (the hold thread does it - no sleep in the send path)."""
+        with self.lock:
+            a = self.active
+            if a is not None and a["mode"] == "click" and a["release_at"] is None:
+                a["release_at"], a["why"] = self.clock() + self.CLICK_SETTLE, why
 
     def release(self, why: str = "released") -> bool:
         with self.lock:
@@ -1823,7 +1847,7 @@ class VoiceApp:
         else:
             self.sender.press(cmd.modifiers, cmd.key, hold)
         if cmd.kind == "mouse" and held is not None and self.hold.active is held and held["mode"] == "click":
-            self.hold.release(f"clicked with '{cmd.phrase}'")   # keyUp of that same held key
+            self.hold.click_done(f"clicked with '{cmd.phrase}'")   # keyUp of that same key, just after
 
     def apply_config(self, cfg: Config) -> None:
         """Swap in a freshly loaded config (after calibration)."""
@@ -1913,8 +1937,11 @@ class AudioFeeder:
             if last and not stable:
                 return                     # wait one more reading before acting on the last word
             if k >= len(self.fired):
+                c = app.cfg.lookup(ph)
+                if c.kind == "release" or (app.hold.active is not None and c.kind == "key" and c.hold_mode == "tap"):
+                    return   # things that would let go of a held key wait for the final, confidence-checked result
                 self.fired.append(ph)
-                app.fire(app.cfg.lookup(ph))
+                app.fire(c)
             i += n
 
     def feed(self, data: bytes, level: Optional[float] = None):

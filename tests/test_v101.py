@@ -17,10 +17,33 @@ def gate_app():
     return app, s, clock
 
 
+class TestHoldRobust(unittest.TestCase):
+    def test_only_fresh_click_or_release_or_key_ends_hold(self):
+        app, s, clock = gate_app()
+        btn = {"down": True}                       # a click already in progress when the hold starts
+        app.hold.left_button = lambda: btn["down"]
+        app.handle_text("warp", 0.95)
+        for down in (True, False):                 # old click finishing: ignored
+            btn["down"] = down; clock.t += 0.01; app.hold.tick()
+        f = ev.AudioFeeder(mock.Mock(), app)
+        f._partial_fire("scan", {}); f._partial_fire("scan", {})        # partial mishear: no effect
+        f._partial_fire("release", {}); f._partial_fire("release", {})
+        self.assertIsNotNone(app.hold.active)
+        btn["down"] = True; clock.t += 0.01; app.hold.tick()             # fresh press...
+        self.assertIsNotNone(app.hold.active)
+        btn["down"] = False; clock.t += 0.01; app.hold.tick()            # ...and release
+        self.assertIsNotNone(app.hold.active)                            # still down for EVE's frame
+        clock.t += 0.2; app.hold.tick()
+        self.assertIsNone(app.hold.active)
+        self.assertEqual(getattr(s, "ups", []), ["d"])
+
+
 class TestWarpGate(unittest.TestCase):
     def check(self, app, s):
         # D down, ONE click while D is still down, then D let go (hold-until-click). Nothing else.
         self.assertEqual(app.rec.calls, [("key", (), "d"), GATE])
+        self.assertEqual(getattr(s, "ups", []), [])     # NOT let go between/at the click
+        app.clock.t += 0.2; app.hold.tick()             # the hold thread lets go after CLICK_SETTLE
         self.assertEqual(s.ups, ["d"])
         self.assertIsNone(app.hold.active)
 

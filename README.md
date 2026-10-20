@@ -135,12 +135,14 @@ In `commands.json`: `{"key": "ctrl", "hold_until": "click"}`, `{"key": "q", "hol
 **Still one input per phrase.** A hold is one key-down and, later, the matching key-up of the same key. Only one key is held at a time. If you start a new hold, or the app sends any other **key**, the held key is let go **first** (so a tap never becomes a chord). A **click command** (e.g. "gate", "click", "select") is different since 1.0.1: the held key stays down while that ONE click is sent, because that's exactly EVE's hold-key-then-click. You said two commands ("warp", then "gate"), the app sent two inputs (D down, one click), and nothing is added in between. In hold-until-click mode the key is let go right after that click; a timed hold keeps running until its time is up.
 
 **The key is always let go:**
-- after your click
+- after your click: once the button has gone down **and back up** (a fresh click that started after the hold began), plus 0.15 s so EVE, which reads keys once per frame, sees key + click together. The app's own click ("gate", "select") works the same way. That 0.15 s is the end of the same held key, not a new input.
 - when the timer or safety limit runs out
 - when you say **"release"** or **"let go"**, or press the **Release** button on the Listen tab (it shows "Holding Ctrl - click your target (4.2s)")
-- when EVE loses focus
+- when EVE loses focus for more than 0.4 s (a quick focus blip doesn't count)
 - on Stop or a settings or mode change
 - when the app closes or crashes (atexit plus try/finally)
+
+Every hold logs why it ended on the Listen tab ("released D (you clicked)", "(before 'scan')", "(time's up)" ...). While a key is held, anything that would let go of it ("release", or another key command) only acts on the final, confidence-checked result, never on a fast partial guess.
 
 Background-window mode supports timed and 'release' holds of single keys (WM_KEYDOWN now, WM_KEYUP later). Hold-until-click is skipped there because your click can't reach a background window.
 
