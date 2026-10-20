@@ -99,6 +99,21 @@ class TestWarpGate(unittest.TestCase):
             self.assertEqual(app.rec.calls, [("key", (), "d"), GATE], name)
 
 
+class TestTimingLog(unittest.TestCase):
+    def test_heard_and_found_times_logged(self):
+        app, s, clock, _, logs = make_app(data=gate_data())
+        got = []
+        app.on_event = lambda k, p, d: got.append((k, p, d))
+        app.locator = lambda t: ((150, 320), "yellow row")
+        f = ev.AudioFeeder(mock.Mock(), app)
+        f.speaking, f.quiet = True, 0.35
+        f._final(f.rec, json.dumps({"text": "gate", "result": [{"word": "gate", "conf": 0.99}]}))
+        self.assertTrue(any("heard 350 ms after you stopped talking" in l for l in logs), logs)
+        self.assertTrue(any(k == "found" and "found in" in d for k, p, d in got), got)
+        app.handle_text("warp", 0.5)                          # rejected: always logged, with the %
+        self.assertTrue(any("heard 'warp' (50%) - below 60%" in l for l in logs), logs)
+
+
 class TestCoreCommands(unittest.TestCase):
     def test_shipped_core_only_toggle_and_one_time_migration(self):
         import shutil, tempfile

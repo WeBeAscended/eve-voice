@@ -2493,7 +2493,7 @@ class MainWindow(_Tk):
                 self.hearing_lbl.configure(text=f"hearing: \"{phrase}...\"" if phrase else "")
             elif k in ("unsure", "unmatched"):
                 self.hearing_lbl.configure(text="")
-                if self.model.setting("log_unmatched"):
+                if k == "unsure" or self.model.setting("log_unmatched"):   # rejections always shown
                     what = "something" if phrase == "[unk]" else f"\"{phrase}\""
                     self.add_log(f"heard {what} {detail}", "unsure" if k == "unsure" else "info")
                 if k == "unsure":

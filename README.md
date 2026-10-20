@@ -168,7 +168,9 @@ This is a **gray area** under the EVE EULA. If you want to be sure, ask CCP supp
 "Show what it sees" saves `what_it_sees.png` with the chosen row marked. Measured from your icon screenshot: yellow outline RGB (224,238,64), hue ≈ 65°, saturation ≈ 0.7. The grey gate has saturation ≤ 0.01.
 
 ## Recognition settings (Settings → Recognition)
-- **How sure before acting:** default 55%. Below this it logs `heard 'warp' (48%) - not sure, skipped` and sends nothing.
+**Timing in the Listen log (1.0.4):** every command shows "heard N ms after you stopped talking" (speech side), and "gate" also shows "found in N ms (screen grab A ms, search B ms)" (screen side), so you can see where any lag is. Rejected words are always logged with their score, e.g. `heard 'warp' (55%) - below 60%, skipped`; lower "How sure before acting" if that happens with words you said clearly. The default is 60% (was 70% in 1.0.3).
+
+- **How sure before acting:** default 60%. Below this it logs `heard 'warp' (48%) - not sure, skipped` and sends nothing.
 - **Noise gate:** default 0.04, the red line on the level bar. "Measure noise" sets it to your background level + 0.02.
 - **Act after you stop talking:** 0.35 s.
 - **Fast response (act on partial results):** on by default. A command fires as soon as it's fully heard, without waiting for the end of the sentence, unless a longer command could still be coming ("lock" waits to see if it's "lock target"). Several commands in one breath ("warp gate") fire one by one in spoken order; each is still one input, and the final result never fires one twice. (Not used in wake-word mode.)

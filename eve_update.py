@@ -168,10 +168,37 @@ def migrate_core_commands(app_dir: str = APP_DIR) -> List[str]:
     return out
 
 
+def migrate_confidence_104(app_dir: str = APP_DIR) -> List[str]:
+    """1.0.4, once: 70% (set by 1.0.3) rejected fast speech - back to 60%. A value the user
+    chose himself (anything but 0.7) is kept."""
+    import json
+    from collections import OrderedDict
+    path = os.path.join(app_dir, USER_CONFIG)
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f, object_pairs_hook=OrderedDict)
+    except (OSError, ValueError):
+        return []
+    done = data.get("_migrations") if isinstance(data, dict) and isinstance(data.get("_migrations"), list) else None
+    if done is None or "1.0.4-confidence" in done:
+        return []
+    s = data.get("settings")
+    out = []
+    if isinstance(s, dict) and s.get("min_confidence") == 0.7:
+        s["min_confidence"] = 0.6
+        out.append("'how sure before acting' 70% -> 60% (fast speech was being skipped)")
+    data["_migrations"] = done + ["1.0.4-confidence"]
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    return out
+
+
 def merge_defaults(app_dir: str = APP_DIR, log: Callable[[str], None] = lambda m: None) -> List[str]:
     for m in migrate_user_config(app_dir):
         log("updated commands.json: " + m)
     for m in migrate_core_commands(app_dir):
+        log("updated commands.json: " + m)
+    for m in migrate_confidence_104(app_dir):
         log("updated commands.json: " + m)
     added = au.merge_new_defaults(os.path.join(app_dir, USER_CONFIG), os.path.join(app_dir, DEFAULT_CONFIG),
                                   os.path.join(app_dir, SEEN_DEFAULTS))

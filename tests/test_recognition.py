@@ -35,14 +35,14 @@ class TestConfidence(unittest.TestCase):
         got = events(app)
         self.assertIsNone(app.handle_text("warp", 0.62))
         self.assertEqual(app.rec.calls, [])
-        self.assertTrue(any("heard 'warp' (62%) - not sure, skipped" in l for l in logs), logs)
+        self.assertTrue(any("heard 'warp' (62%) - below" in l and "skipped" in l for l in logs), logs)
         self.assertEqual(got[0][0], "unsure")
         clock.t += 10
         self.assertIsNotNone(app.handle_text("warp", 0.9))
         self.assertEqual(app.rec.calls, [("key", (), "d")])
 
     def test_threshold_setting(self):
-        self.assertEqual(ev.DEFAULT_SETTINGS["min_confidence"], 0.7)
+        self.assertEqual(ev.DEFAULT_SETTINGS["min_confidence"], 0.6)
         app, *_ = make_app(min_confidence=0.5)
         self.assertIsNotNone(app.handle_text("warp", 0.62))
         with self.assertRaises(ev.ConfigError):

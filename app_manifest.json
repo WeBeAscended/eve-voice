@@ -1,6 +1,6 @@
 {
   "name": "eve-voice",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "files": [
     "README.md",
     "autoupdater.py",
@@ -20,5 +20,5 @@
     "setup.bat",
     "version.py"
   ],
-  "built": "2026-10-20T02:27:25Z"
+  "built": "2026-10-20T02:40:19Z"
 }

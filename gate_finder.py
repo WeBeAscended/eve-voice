@@ -194,9 +194,20 @@ def find_target(img, target: dict) -> Result:
 
 
 def grab_box(box):
-    """ONE picture of just this box (screen pixels). Nothing is stored."""
-    from PIL import ImageGrab
+    """ONE picture of just this box (screen pixels). Nothing is stored.
+    Uses mss (copies ONLY the box) when installed: on Windows, Pillow's ImageGrab copies the
+    WHOLE desktop (every monitor with all_screens) and then crops - that was the slow part."""
+    from PIL import Image, ImageGrab
     l, t, r, b = (int(v) for v in box)
+    try:
+        import mss
+        with mss.mss() as sct:
+            shot = sct.grab({"left": l, "top": t, "width": r - l, "height": b - t})
+            return Image.frombytes("RGB", shot.size, shot.bgra, "raw", "BGRX")
+    except ImportError:
+        pass
+    except Exception:
+        pass   # any mss problem: fall back to Pillow below
     if sys.platform == "win32":
         return ImageGrab.grab(bbox=(l, t, r, b), all_screens=True)
     return ImageGrab.grab(bbox=(l, t, r, b))
@@ -204,12 +215,18 @@ def grab_box(box):
 
 def locate(target: dict, grab=grab_box) -> Tuple[Optional[Tuple[int, int]], str]:
     """Called once per spoken command. -> (screen point, message) or (None, why)."""
+    import time
     box = target["box"]
-    res = find_target(grab(box), target)
+    t0 = time.perf_counter()
+    img = grab(box)
+    t1 = time.perf_counter()
+    res = find_target(img, target)
+    t2 = time.perf_counter()
+    took = f"(screen grab {(t1 - t0) * 1000:.0f} ms, search {(t2 - t1) * 1000:.0f} ms)"
     if res.point is None:
-        return None, res.message
+        return None, f"{res.message} {took}"
     x, y = box[0] + res.point[0], box[1] + res.point[1]
-    return (x, y), f"{res.message} -> clicking {x},{y}"
+    return (x, y), f"{res.message} -> clicking {x},{y} {took}"
 
 
 def sample_color(img) -> List[int]:

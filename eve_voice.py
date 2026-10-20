@@ -352,7 +352,7 @@ DEFAULT_SETTINGS = {
     "allow_mouse_at": False,
     "model_path": "model",
     # recognition
-    "min_confidence": 0.7,           # how sure (0..1) EVERY word must be before acting
+    "min_confidence": 0.6,           # how sure (0..1) EVERY word must be before acting
     "noise_gate": 0.04,              # ignore audio quieter than this peak level (0 = off)
     "endpoint_silence_seconds": 0.35,  # act this soon after you stop talking (0 = recogniser default)
     "log_unmatched": True,           # show 'heard X - not a command' lines
@@ -1477,7 +1477,8 @@ def parse_result(js: str) -> Tuple[str, Optional[float]]:
         return "", None
     text = r.get("text", "") or ""
     words = r.get("result") or []
-    confs = [float(w["conf"]) for w in words if isinstance(w, dict) and "conf" in w]
+    confs = [float(w["conf"]) for w in words if isinstance(w, dict) and "conf" in w
+             and w.get("word") != "[unk]"]   # the garbage token's own score doesn't matter
     return text, (min(confs) if confs else None)
 
 
@@ -1698,7 +1699,7 @@ class VoiceApp:
         near = self.cfg.closest(text) if text and "[unk]" != text else None
         tail = f"; closest command: '{near}'" if near and near != text else ""
         detail = f"{why}{tail}"
-        if self.cfg.log_unmatched:
+        if self.cfg.log_unmatched or kind == "unsure":
             self.log(f"  heard '{text}'{pct} - {detail}")
         self._emit(kind, text, f"{pct.strip()} {detail}".strip())
 
@@ -1715,7 +1716,8 @@ class VoiceApp:
                 self._heard("unmatched", "[unk]", conf, "not a command")
             return None
         if conf is not None and conf < self.cfg.min_confidence:
-            self._heard("unsure", normalize_phrase(text), conf, "not sure, skipped")
+            self._heard("unsure", normalize_phrase(text), conf,
+                        f"below {self.cfg.min_confidence:.0%}, skipped (Settings > How sure before acting)")
             return None
         cmd_text = self.gate.filter(text)
         if cmd_text is None:
@@ -1803,10 +1805,12 @@ class VoiceApp:
             if self.locator is None or hwnd is not None:
                 self._skip(cmd, "- screen finding isn't available here - nothing sent")
                 return None
+            t0 = time.perf_counter()
             try:
                 at, msg = self.locator(self.cfg.color_targets[cmd.color_target])
             except Exception as e:
                 at, msg = None, f"screen check failed ({e})"
+            msg = f"{msg} [found in {(time.perf_counter() - t0) * 1000:.0f} ms]"
             if at is None:
                 self._skip(cmd, f"- {msg} - nothing sent")
                 return None
@@ -1818,8 +1822,12 @@ class VoiceApp:
             self._skip(cmd, f"- {e} - nothing sent")
             return None
         self.last_fired[cmd.phrase] = now
+        heard, self.heard_ms = getattr(self, "heard_ms", None), None
         if self.cfg.print_confirm:
-            self.log(f"  > {cmd.phrase}  [{cmd.key_spec}]")
+            tail = f"  (heard {heard} ms after you stopped talking)" if heard is not None else ""
+            self.log(f"  > {cmd.phrase}  [{cmd.key_spec}]{tail}")
+        if heard is not None:
+            self._emit("timing", cmd.phrase, f"heard in {heard} ms")
         self._emit("sent", cmd.phrase, cmd.key_spec)
         self.speaker.say(cmd.phrase)
         return cmd
@@ -1903,6 +1911,7 @@ class AudioFeeder:
         return self.rec
 
     def _final(self, rec, js: str) -> None:
+        self.app.heard_ms = int(round(self.quiet * 1000)) if self.speaking else None
         self.speaking, self.quiet = False, 0.0
         if self.partial and self.on_partial:
             self.on_partial("")
@@ -1943,6 +1952,7 @@ class AudioFeeder:
                 if c.kind == "release" or (app.hold.active is not None and c.kind == "key" and c.hold_mode == "tap"):
                     return   # things that would let go of a held key wait for the final, confidence-checked result
                 self.fired.append(ph)
+                app.heard_ms = int(round(self.quiet * 1000)) if self.speaking else None
                 app.fire(c)
             i += n
 

@@ -5,4 +5,5 @@ keyboard>=0.13.5
 pynput>=1.7.6
 pyttsx3>=2.90
 Pillow>=10.0
+mss>=9.0              # fast screen grab of just the Overview box ('gate')
 cryptography>=41.0   # verifies update signatures (a pure-Python fallback exists)

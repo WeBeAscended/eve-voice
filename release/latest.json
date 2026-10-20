@@ -1,8 +1,8 @@
 {
-  "version": "1.0.3",
-  "url": "eve-voice-1.0.3.zip",
-  "sha256": "95de8cbd0e807a5d6aadfa79c4775c371f99761082f1af8b213a29d1528b7ca1",
-  "size": 166239,
-  "notes": "Trimmed to core commands; others can be switched back on in Commands",
+  "version": "1.0.4",
+  "url": "eve-voice-1.0.4.zip",
+  "sha256": "4e18fef31d825030584c99f444b1fb8ac465b113197f382e491230912e0e3f18",
+  "size": 167290,
+  "notes": "Faster gate finding; timing shown in Listen log; 60% confidence default so fast speech gets through, rejections shown with their %",
   "min_updater_version": 1
 }
