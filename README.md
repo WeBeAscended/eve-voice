@@ -119,6 +119,11 @@ Set `"mode"` in `settings`:
 
 ⚠️ **Check the keybinds.** Your spec maps **warp → D**, but EVE's own default is **S = Warp To** and **D = Jump/Dock**. Check everything in Esc → Shortcuts and make `commands.json` match. Movement keys act on the item **selected** in EVE, so say "select" (cursor over it) or "select next" first, then "warp" as a separate command.
 
+## Only the core commands are on (since 1.0.3)
+Fewer phrases = fewer false triggers (with a big list the recogniser kept "hearing" web, next gate ...). **On by default:** warp, gate, align, approach, orbit, lock, stop ship, release (and dock / jump once you give them a key). "gate" also needs the opt-in Next gate setup. Everything else (weapons, mid/low slots, web, point, drones, mining, scanning, map, mouse clicks, setup phrases ...) is still in the list but **off**, and an off command is left out of the speech list entirely, so it can't be heard.
+
+**Turn one back on:** Commands tab → click the box in the **On** column (or select it and press **Turn on / off**). The listener picks it up right away, then press Save to keep it. Commands you made yourself were left on when updating. Each word must also be at least 70% certain now ("How sure before acting", Settings).
+
 ## Hold-and-click (lock, approach, orbit, warp ...)
 EVE's default actions are **hold a key, then click the target**: Ctrl = lock, Q = approach, W = orbit, E = keep at range, A = align, S = warp to, D = jump/dock. A quick tap of those keys does nothing, which is why it felt "wonky" before.
 

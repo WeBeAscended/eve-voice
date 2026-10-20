@@ -26,8 +26,9 @@ class TestHoldRobust(unittest.TestCase):
         for down in (True, False):                 # old click finishing: ignored
             btn["down"] = down; clock.t += 0.01; app.hold.tick()
         f = ev.AudioFeeder(mock.Mock(), app)
-        f._partial_fire("scan", {}); f._partial_fire("scan", {})        # partial mishear: no effect
-        f._partial_fire("release", {}); f._partial_fire("release", {})
+        for w in ("scan", "release"):                                    # partial mishear: no effect
+            pj = {"partial_result": [{"word": w, "conf": 1.0}]}
+            f._partial_fire(w, pj); f._partial_fire(w, pj)
         self.assertIsNotNone(app.hold.active)
         btn["down"] = True; clock.t += 0.01; app.hold.tick()             # fresh press...
         self.assertIsNotNone(app.hold.active)
@@ -63,7 +64,9 @@ class TestWarpGate(unittest.TestCase):
         app.locator = lambda t: ((150, 320), "yellow row")
         self.assertEqual(app.cfg.commands["warp"].hold_seconds, 10.0)
         f = ev.AudioFeeder(mock.Mock(), app)
-        f._partial_fire("warp gate", {}); f._partial_fire("warp gate", {})   # stable partial -> fires
+        pj = {"partial_result": [{"word": "warp", "conf": 1.0}, {"word": "gate", "conf": 1.0}]}
+        f._partial_fire("warp gate", pj); f._partial_fire("warp gate", pj)   # stable partial -> fires
+        self.assertEqual(len(app.rec.calls), 2)
         f._final(f.rec, json.dumps({"text": "warp gate"}))                     # final: nothing again
         self.assertEqual(app.rec.calls, [("key", (), "d"), GATE])
         self.assertIsNotNone(app.hold.active)                 # timed hold keeps going after the click
@@ -94,6 +97,37 @@ class TestWarpGate(unittest.TestCase):
                 f.feed(raw[i:i + n])
             f._final(rec, rec.FinalResult())
             self.assertEqual(app.rec.calls, [("key", (), "d"), GATE], name)
+
+
+class TestCoreCommands(unittest.TestCase):
+    def test_shipped_core_only_toggle_and_one_time_migration(self):
+        import shutil, tempfile
+        import eve_update, eve_voice_gui as gui
+        from test_eve_voice import SHIPPED_PATH
+        cfg = ev.load_config(SHIPPED_PATH)
+        self.assertEqual(ev.build_grammar(cfg), ["align", "approach", "lock", "orbit", "release",
+                                                 "stop ship", "warp", "[unk]"])   # gate: + once opted in
+        d = tempfile.mkdtemp()
+        shutil.copy(SHIPPED_PATH, os.path.join(d, "commands.json"))
+        m = gui.ConfigModel(os.path.join(d, "commands.json"))
+        m.set_command_enabled("combat_mid_slots", "web", True)
+        self.assertIn("web", ev.build_grammar(m.check()))
+        m.set_command_enabled("combat_mid_slots", "web", False)
+        self.assertNotIn("web", ev.build_grammar(m.check()))
+        # an older user file: non-core switched off once, own commands kept on, keys untouched
+        from test_eve_voice import CFG_PATH
+        data = json.load(open(CFG_PATH)); data["groups"]["mine"] = {"commands": {"shields up": "alt+f5"}}
+        data["groups"]["combat_mid_slots"]["commands"]["web"] = "alt+f9"
+        json.dump(data, open(os.path.join(d, "commands.json"), "w"))
+        self.assertTrue(eve_update.migrate_core_commands(d))
+        self.assertTrue(os.path.exists(os.path.join(d, "commands.json.before-update")))
+        after = json.load(open(os.path.join(d, "commands.json")))
+        self.assertEqual(after["groups"]["combat_mid_slots"]["commands"]["web"], {"key": "alt+f9", "enabled": False})
+        phrases = ev.load_config_dict(after).all_phrases()
+        self.assertIn("shields up", phrases); self.assertNotIn("let go", phrases); self.assertNotIn("web", phrases)
+        after["groups"]["combat_mid_slots"]["commands"]["web"] = "alt+f9"      # he turns it back on
+        json.dump(after, open(os.path.join(d, "commands.json"), "w"))
+        self.assertEqual(eve_update.migrate_core_commands(d), [])              # never runs twice
 
 
 if __name__ == "__main__":

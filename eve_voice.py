@@ -85,7 +85,7 @@ def parse_key(spec: str) -> Tuple[List[str], str]:
 MOUSE_BUTTONS = ("left", "right", "middle")   # single clicks only (no double click: that's two clicks)
 _TARGET_FIELDS = ("mouse_at", "mouse_box", "mouse_spot", "find_color")
 # Per-command options. They tune how the ONE action is triggered/sent - they never add an action.
-_OPTION_FIELDS = ("also", "hold", "cooldown", "hold_seconds", "hold_until", "hold_max")
+_OPTION_FIELDS = ("also", "hold", "cooldown", "hold_seconds", "hold_until", "hold_max", "enabled")
 HOLD_TIMED_MAX = 10.0       # "hold this key for N seconds" cap (taps stay capped at 0.5 s)
 HOLD_SAFETY_MAX = 30.0      # hard cap for "hold until I click / say release"
 HOLD_DEFAULT_MAX = {"click": 10.0, "release": 30.0}
@@ -352,7 +352,7 @@ DEFAULT_SETTINGS = {
     "allow_mouse_at": False,
     "model_path": "model",
     # recognition
-    "min_confidence": 0.55,          # how sure (0..1) the recogniser must be before acting
+    "min_confidence": 0.7,           # how sure (0..1) EVERY word must be before acting
     "noise_gate": 0.04,              # ignore audio quieter than this peak level (0 = off)
     "endpoint_silence_seconds": 0.35,  # act this soon after you stop talking (0 = recogniser default)
     "log_unmatched": True,           # show 'heard X - not a command' lines
@@ -484,6 +484,8 @@ def load_config_dict(data: dict) -> Config:
         for phrase, key_spec in (group.get("commands") or {}).items():
             if phrase.startswith("_"):
                 continue
+            if isinstance(key_spec, dict) and key_spec.get("enabled") is False:
+                continue  # switched off in the Commands tab: not in the grammar, can't be heard
             norm = normalize_phrase(phrase)
             if not norm:
                 warnings.append(f"[{gname}] empty phrase skipped")
@@ -1922,8 +1924,8 @@ class AudioFeeder:
             return
         confs = [float(w["conf"]) for w in (pj.get("partial_result") or [])
                  if isinstance(w, dict) and "conf" in w]
-        if confs and min(confs) < app.cfg.min_confidence:
-            return
+        if len(confs) != len(normalize_phrase(p).split()) or min(confs) < app.cfg.min_confidence:
+            return   # every word needs a confidence at or above the threshold (else wait for the final)
         segs = app.cfg.segment(p)
         if not segs or segs[:len(self.fired)] != self.fired:
             return

@@ -1,5 +1,5 @@
 {
-  "_README": "EVE Voice config. 1:1 RULE: each word or phrase you SAY triggers exactly ONE input - one key / one hotkey chord (\"q\", \"alt+f1\") OR one single mouse click ({\"mouse\": \"left\"|\"right\"|\"middle\"}). Never both, never a sequence. Combos ('steps'), double clicks and modifier+click are rejected when loading. Keys are EVE's DEFAULT shortcuts as best we know them, plus your spec (warp = D) - verify every one in-game (Esc > Shortcuts) and edit to match YOUR binds. Delete any group or line you don't use. Keys starting with '_' are comments.",
+  "_README": "EVE Voice config. 1:1 RULE: each word or phrase you SAY triggers exactly ONE input - one key / one hotkey chord (\"q\", \"alt+f1\") OR one single mouse click ({\"mouse\": \"left\"|\"right\"|\"middle\"}). Never both, never a sequence. Combos ('steps'), double clicks and modifier+click are rejected when loading. Keys are EVE's DEFAULT shortcuts as best we know them, plus your spec (warp = D) - verify every one in-game (Esc > Shortcuts) and edit to match YOUR binds. Delete any group or line you don't use. Keys starting with '_' are comments. Since 1.0.3 only the core travel commands are ON (warp, gate, align, approach, orbit, lock, stop ship, release; dock/jump once you give them a key). Everything else is listed but OFF (\"enabled\": false) so it can't be heard - switch it on in the app: Commands tab, click the box in the On column.",
   "settings": {
     "_mode": "How listening is triggered. \"always\" = every recognised phrase fires. \"push_to_talk\" = only while push_to_talk_key is held. \"wake_word\" = say the wake word first (e.g. 'computer warp', or 'computer' ... then 'warp' within wake_window_seconds).",
     "mode": "always",
@@ -25,8 +25,8 @@
     "allow_mouse_at": false,
     "_model_path": "Speech model folder. \"model\" = fast small model (setup.bat). \"model-accurate\" = the larger, more accurate English model (download it in the app: Settings > Speech accuracy).",
     "model_path": "model",
-    "_min_confidence": "How sure the recogniser must be (0-1, lowest word) before acting. Below this it logs 'heard X (52%) - not sure, skipped' and sends nothing. 0.55 comes from tests with your recording: clean speech scores 1.0, correct words in heavy noise ~0.6. Raise it if you get wrong commands, lower it if it skips things you said clearly.",
-    "min_confidence": 0.55,
+    "_min_confidence": "How sure the recogniser must be (0-1) about EVERY word before acting. Below this it logs 'heard X (52%) - not sure, skipped' and sends nothing. 0.7 since 1.0.3 (fewer false triggers). Lower it a little if it skips things you said clearly.",
+    "min_confidence": 0.7,
     "_noise_gate": "Ignore audio quieter than this peak level (0-1, 0 = off). 0.04 sits just above the background level in your recording (0.01-0.03). Use 'Measure noise' in the app (Settings) to set it from your room/game sound.",
     "noise_gate": 0.04,
     "_endpoint_silence_seconds": "Act this long after you stop talking (shorter = snappier; too short can cut 'keep at range' in half). 0 = recogniser default.",
@@ -82,41 +82,116 @@
     "combat_weapons": {
       "_note": "PvP / PvE. High slots F1-F8 = EVE default. Rename phrases to what's fitted, e.g. 'guns' -> F1.",
       "commands": {
-        "high one": "f1",
-        "high two": "f2",
-        "high three": "f3",
-        "high four": "f4",
-        "high five": "f5",
-        "high six": "f6",
-        "high seven": "f7",
-        "high eight": "f8",
-        "fire": "f1"
+        "high one": {
+          "key": "f1",
+          "enabled": false
+        },
+        "high two": {
+          "key": "f2",
+          "enabled": false
+        },
+        "high three": {
+          "key": "f3",
+          "enabled": false
+        },
+        "high four": {
+          "key": "f4",
+          "enabled": false
+        },
+        "high five": {
+          "key": "f5",
+          "enabled": false
+        },
+        "high six": {
+          "key": "f6",
+          "enabled": false
+        },
+        "high seven": {
+          "key": "f7",
+          "enabled": false
+        },
+        "high eight": {
+          "key": "f8",
+          "enabled": false
+        },
+        "fire": {
+          "key": "f1",
+          "enabled": false
+        }
       }
     },
     "combat_mid_slots": {
       "_note": "Mid slots = Alt+F1..F8 by default. Typical: prop mod, point, web, shield booster. Rename to match your fit.",
       "commands": {
-        "mid one": "alt+f1",
-        "mid two": "alt+f2",
-        "mid three": "alt+f3",
-        "mid four": "alt+f4",
-        "mid five": "alt+f5",
-        "mid six": "alt+f6",
-        "mid seven": "alt+f7",
-        "mid eight": "alt+f8",
-        "afterburner": "alt+f1",
-        "point": "alt+f2",
-        "web": "alt+f3"
+        "mid one": {
+          "key": "alt+f1",
+          "enabled": false
+        },
+        "mid two": {
+          "key": "alt+f2",
+          "enabled": false
+        },
+        "mid three": {
+          "key": "alt+f3",
+          "enabled": false
+        },
+        "mid four": {
+          "key": "alt+f4",
+          "enabled": false
+        },
+        "mid five": {
+          "key": "alt+f5",
+          "enabled": false
+        },
+        "mid six": {
+          "key": "alt+f6",
+          "enabled": false
+        },
+        "mid seven": {
+          "key": "alt+f7",
+          "enabled": false
+        },
+        "mid eight": {
+          "key": "alt+f8",
+          "enabled": false
+        },
+        "afterburner": {
+          "key": "alt+f1",
+          "enabled": false
+        },
+        "point": {
+          "key": "alt+f2",
+          "enabled": false
+        },
+        "web": {
+          "key": "alt+f3",
+          "enabled": false
+        }
       }
     },
     "combat_low_slots": {
       "_note": "Low slots = Ctrl+F1..F8 by default (repairers, hardeners).",
       "commands": {
-        "low one": "ctrl+f1",
-        "low two": "ctrl+f2",
-        "low three": "ctrl+f3",
-        "low four": "ctrl+f4",
-        "repair": "ctrl+f1"
+        "low one": {
+          "key": "ctrl+f1",
+          "enabled": false
+        },
+        "low two": {
+          "key": "ctrl+f2",
+          "enabled": false
+        },
+        "low three": {
+          "key": "ctrl+f3",
+          "enabled": false
+        },
+        "low four": {
+          "key": "ctrl+f4",
+          "enabled": false
+        },
+        "repair": {
+          "key": "ctrl+f1",
+          "enabled": false
+        }
       }
     },
     "combat_targeting": {
@@ -128,7 +203,8 @@
         },
         "lock target": {
           "key": "ctrl",
-          "hold_until": "click"
+          "hold_until": "click",
+          "enabled": false
         }
       }
     },
@@ -136,25 +212,38 @@
       "_note": "ONE single click at the CURRENT cursor position. No double clicks, no modifier+click (1:1 rule).",
       "commands": {
         "select": {
-          "mouse": "left"
+          "mouse": "left",
+          "enabled": false
         },
         "click": {
-          "mouse": "left"
+          "mouse": "left",
+          "enabled": false
         },
         "right click": {
-          "mouse": "right"
+          "mouse": "right",
+          "enabled": false
         },
         "middle click": {
-          "mouse": "middle"
+          "mouse": "middle",
+          "enabled": false
         }
       }
     },
     "drones": {
       "_note": "Drone defaults: Launch Shift+F, Engage F, Return to bay Shift+R. Verify under Shortcuts > Drones.",
       "commands": {
-        "launch drones": "shift+f",
-        "drones attack": "f",
-        "drones return": "shift+r"
+        "launch drones": {
+          "key": "shift+f",
+          "enabled": false
+        },
+        "drones attack": {
+          "key": "f",
+          "enabled": false
+        },
+        "drones return": {
+          "key": "shift+r",
+          "enabled": false
+        }
       }
     },
     "navigation": {
@@ -170,7 +259,8 @@
         },
         "keep at range": {
           "key": "e",
-          "hold_until": "click"
+          "hold_until": "click",
+          "enabled": false
         },
         "align": {
           "key": "a",
@@ -188,39 +278,56 @@
     "mining": {
       "_note": "Mining lasers/strip miners are just high slots - set them to whichever F-key they're in. Survey scanner is usually a mid slot.",
       "commands": {
-        "lasers": "f1",
-        "second laser": "f2",
-        "survey scan": "alt+f4"
+        "lasers": {
+          "key": "f1",
+          "enabled": false
+        },
+        "second laser": {
+          "key": "f2",
+          "enabled": false
+        },
+        "survey scan": {
+          "key": "alt+f4",
+          "enabled": false
+        }
       }
     },
     "exploration_scanning": {
       "_note": "V = run directional scan; Alt+D = D-Scan window; Alt+P = Probe Scanner window. Verify.",
       "commands": {
-        "scan": "v",
-        "d scan window": "alt+d",
-        "probe scanner": "alt+p"
+        "scan": {
+          "key": "v",
+          "enabled": false
+        },
+        "d scan window": {
+          "key": "alt+d",
+          "enabled": false
+        },
+        "probe scanner": {
+          "key": "alt+p",
+          "enabled": false
+        }
       }
     },
     "windows_travel": {
       "_note": "F10 = World Map (default). Add others (inventory, market, journal) yourself from Esc > Shortcuts - we didn't include ones we weren't sure of.",
       "commands": {
-        "map": "f10",
+        "map": {
+          "key": "f10",
+          "enabled": false
+        },
         "select next": {
           "mouse": "left",
-          "mouse_spot": "next_waypoint"
+          "mouse_spot": "next_waypoint",
+          "enabled": false
         },
         "gate": {
           "mouse": "left",
-          "find_color": "next_gate",
-          "also": [
-            "select next gate",
-            "next gate",
-            "select gate"
-          ]
+          "find_color": "next_gate"
         }
       },
       "_note_select_next": "'select next' = ONE left click on the saved next_waypoint spot (selects it). Then say 'warp' (or your jump key phrase) as a separate command. Set the spot once with 'run.bat --calibrate'. Until then it's skipped with a warning. Re-calibrate if that row/panel moves.",
-      "_note_gate": "'gate' (also 'select next gate' / 'next gate' / 'select gate') = ONE left click on the YELLOW next-gate row of your Overview, found on screen when you say it. OPT-IN (settings.allow_screen_read, off by default) and needs setup in the app (Next gate tab). If no yellow row is found, or two far apart, it clicks NOTHING. Say 'warp gate' (in one breath or with a pause): 'warp' holds D, 'gate' clicks the gate while D is down, then D is let go."
+      "_note_gate": "'gate' = ONE left click on the YELLOW next-gate row of your Overview, found on screen when you say it. OPT-IN (settings.allow_screen_read, off by default) and needs setup in the app (Next gate tab). If no yellow row is found, or two far apart, it clicks NOTHING. Say 'warp gate' (in one breath or with a pause): 'warp' holds D, 'gate' clicks the gate while D is down, then D is let go."
     },
     "custom_set_your_own": {
       "_note": "EVE has these actions but default keys vary / we're not sure - bind a single key or chord in Esc > Shortcuts, then fill it in. Entries with an empty key are skipped.",
@@ -238,7 +345,8 @@
       "commands": {
         "click undock": {
           "mouse": "left",
-          "mouse_box": null
+          "mouse_box": null,
+          "enabled": false
         }
       }
     },
@@ -247,24 +355,26 @@
       "enabled": true,
       "commands": {
         "set way point spot": {
-          "calibrate": "next_waypoint"
+          "calibrate": "next_waypoint",
+          "enabled": false
         },
         "teach command": {
-          "teach": true
+          "teach": true,
+          "enabled": false
         },
         "release": {
-          "release": true,
-          "also": [
-            "let go"
-          ]
+          "release": true
         }
       },
-      "_note_release": "'release' / 'let go' lets go of a held key right away - it's the keyUp of that same one input, not a new one."
+      "_note_release": "'release' lets go of a held key right away - it's the keyUp of that same one input, not a new one."
     },
     "background_test": {
       "_note": "Harmless check for background_window mode: toggles the map (F10) on the target client. Change the key if you've rebound the map.",
       "commands": {
-        "test background": "f10"
+        "test background": {
+          "key": "f10",
+          "enabled": false
+        }
       }
     }
   }

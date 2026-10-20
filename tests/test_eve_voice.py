@@ -9,8 +9,30 @@ CFG_PATH = os.path.join(ROOT, "commands.default.json")
 SRC_PATH = os.path.join(ROOT, "eve_voice.py")
 
 
-def load_raw(path=CFG_PATH):
+def _all_on(path):
+    """Shipped config with every command switched on and the pre-1.0.3 alternates, so the
+    older tests exercise every default phrase. SHIPPED_PATH = the real file (core only)."""
     with open(path, encoding="utf-8") as f:
+        data = json.load(f)
+    for g in data["groups"].values():
+        for ph, spec in list((g.get("commands") or {}).items()) if isinstance(g, dict) else []:
+            if isinstance(spec, dict) and spec.pop("enabled", True) is False and list(spec) == ["key"]:
+                g["commands"][ph] = spec["key"]
+    data["groups"]["windows_travel"]["commands"]["gate"]["also"] = ["select next gate", "next gate", "select gate"]
+    data["groups"]["setup"]["commands"]["release"]["also"] = ["let go"]
+    import tempfile
+    out = os.path.join(tempfile.mkdtemp(prefix="evetest-"), "commands.all_on.json")
+    with open(out, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+    return out
+
+
+SHIPPED_PATH = CFG_PATH
+CFG_PATH = _all_on(SHIPPED_PATH)
+
+
+def load_raw(path=None):
+    with open(path or CFG_PATH, encoding="utf-8") as f:
         return json.load(f)
 
 
@@ -644,7 +666,7 @@ class TestBackground(unittest.TestCase):
 
     def test_off_by_default(self):
         self.assertEqual(load_raw()["target"]["mode"], "foreground")
-        self.assertEqual(ev.load_config(CFG_PATH).target["mode"], "foreground")
+        self.assertEqual(ev.load_config(SHIPPED_PATH).target["mode"], "foreground")
 
     def test_requires_title_and_valid_mode(self):
         g = {"g": {"commands": {"a": "a"}}}

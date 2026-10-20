@@ -1,5 +1,5 @@
 """EVE Voice version + where updates come from. tools/make_release.py rewrites VERSION."""
-VERSION = "1.0.2"
+VERSION = "1.0.3"
 
 # Base URL of the folder that holds latest.json, latest.json.sig and the release zips.
 # Placeholder until hosting is decided (Cloudflare Pages / GitHub Releases ...).

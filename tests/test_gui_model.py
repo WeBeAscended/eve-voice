@@ -8,7 +8,7 @@ sys.path.insert(0, ROOT)
 import eve_voice as ev
 import eve_voice_gui as gui
 
-CFG_PATH = os.path.join(ROOT, "commands.default.json")
+from test_eve_voice import CFG_PATH  # all-commands-on copy of the shipped config
 GUI_SRC = os.path.join(ROOT, "eve_voice_gui.py")
 
 

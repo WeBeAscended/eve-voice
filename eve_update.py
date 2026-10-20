@@ -102,8 +102,76 @@ def migrate_user_config(app_dir: str = APP_DIR) -> List[str]:
     return done
 
 
+CORE_COMMANDS = {"warp", "gate", "align", "approach", "orbit", "lock", "dock", "jump", "stop ship", "release"}
+# every phrase the app shipped before 1.0.3 - anything else in commands.json is the user's own (left alone)
+SHIPPED_PHRASES = set(['afterburner', 'align', 'approach', 'click', 'click undock', 'd scan window', 'dock', 'drones attack', 'drones return', 'fire', 'gate', 'high eight', 'high five', 'high four', 'high one', 'high seven', 'high six', 'high three', 'high two', 'jump', 'keep at range', 'lasers', 'launch drones', 'lock', 'lock target', 'low four', 'low one', 'low three', 'low two', 'map', 'mid eight', 'mid five', 'mid four', 'mid one', 'mid seven', 'mid six', 'mid three', 'mid two', 'middle click', 'next overview tab', 'open cargo', 'orbit', 'point', 'previous overview tab', 'probe scanner', 'release', 'repair', 'right click', 'scan', 'second laser', 'select', 'select next', 'select next gate', 'set way point spot', 'stop ship', 'survey scan', 'teach command', 'test background', 'toggle autopilot', 'unlock target', 'warp', 'web'])
+TRIM_ALTERNATES = {"gate": {"next gate", "select gate", "select next gate"}, "release": {"let go"}}
+MIGRATION_CORE = "1.0.3-core-commands"
+
+
+def migrate_core_commands(app_dir: str = APP_DIR) -> List[str]:
+    """1.0.3, runs ONCE: only the core travel commands stay on; other shipped commands are
+    switched off (kept in the list, keys/holds untouched). The user's own commands stay on.
+    Too many active phrases made the recogniser hear 'web', 'next gate' ... by mistake."""
+    import json
+    from collections import OrderedDict
+    path = os.path.join(app_dir, USER_CONFIG)
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f, object_pairs_hook=OrderedDict)
+    except (OSError, ValueError):
+        return []
+    if not isinstance(data, dict):
+        return []
+    done_list = data.get("_migrations") if isinstance(data.get("_migrations"), list) else []
+    if MIGRATION_CORE in done_list:
+        return []
+    off, trimmed = [], []
+    for g in (data.get("groups") or {}).values():
+        cmds = g.get("commands") if isinstance(g, dict) else None
+        if not isinstance(cmds, dict):
+            continue
+        for ph in list(cmds):
+            spec = cmds[ph]
+            if ph.startswith("_") or ph not in SHIPPED_PHRASES or spec == "":
+                continue
+            if ph in CORE_COMMANDS:
+                if isinstance(spec, dict) and isinstance(spec.get("also"), list) and ph in TRIM_ALTERNATES:
+                    keep = [a for a in spec["also"] if a not in TRIM_ALTERNATES[ph]]
+                    if keep != spec["also"]:
+                        trimmed.append(ph)
+                        if keep:
+                            spec["also"] = keep
+                        else:
+                            spec.pop("also")
+                continue
+            spec = OrderedDict([("key", spec)]) if isinstance(spec, str) else spec
+            if isinstance(spec, dict) and spec.get("enabled") is not False:
+                spec["enabled"] = False
+                off.append(ph)
+            cmds[ph] = spec
+    s = data.get("settings")
+    bumped = isinstance(s, dict) and s.get("min_confidence") in (0.55, None)
+    if bumped:
+        s["min_confidence"] = 0.7
+    data["_migrations"] = done_list + [MIGRATION_CORE]
+    shutil.copy2(path, path + ".before-update")
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2, ensure_ascii=False)
+    out = []
+    if off:
+        out.append(f"switched OFF {len(off)} non-core commands (turn them back on in Commands): " + ", ".join(off))
+    if trimmed:
+        out.append("removed extra phrasings from: " + ", ".join(trimmed))
+    if bumped:
+        out.append("'how sure before acting' raised 55% -> 70%")
+    return out
+
+
 def merge_defaults(app_dir: str = APP_DIR, log: Callable[[str], None] = lambda m: None) -> List[str]:
     for m in migrate_user_config(app_dir):
+        log("updated commands.json: " + m)
+    for m in migrate_core_commands(app_dir):
         log("updated commands.json: " + m)
     added = au.merge_new_defaults(os.path.join(app_dir, USER_CONFIG), os.path.join(app_dir, DEFAULT_CONFIG),
                                   os.path.join(app_dir, SEEN_DEFAULTS))

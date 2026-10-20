@@ -303,6 +303,24 @@ class ConfigModel:
         else:
             g["enabled"] = False
 
+    def command_enabled(self, group: str, phrase: str) -> bool:
+        spec = self.data["groups"][group]["commands"].get(phrase)
+        return not (isinstance(spec, dict) and spec.get("enabled") is False)
+
+    def set_command_enabled(self, group: str, phrase: str, on: bool) -> None:
+        """Per-command on/off. Off = left out of the speech grammar entirely (can't be heard)."""
+        cmds = self.data["groups"][group]["commands"]
+        spec = cmds[phrase]
+        if on:
+            if isinstance(spec, dict):
+                spec = OrderedDict((k, v) for k, v in spec.items() if k != "enabled")
+                if list(spec) == ["key"]:
+                    spec = spec["key"]
+        else:
+            spec = OrderedDict([("key", spec)]) if isinstance(spec, str) else OrderedDict(spec)
+            spec["enabled"] = False
+        cmds[phrase] = spec
+
     def _ensure_group(self, group: str) -> dict:
         group = group.strip()
         if not group or group.startswith("_"):
@@ -473,6 +491,8 @@ def command_status(model: ConfigModel, cfg: Optional[ev.Config], group: str, phr
     """'On' / 'Off (group off)' / 'Not set' / 'Needs spot' / 'Skipped (see log)'."""
     if not model.group_enabled(group):
         return "Off (group off)"
+    if isinstance(spec, dict) and spec.get("enabled") is False:
+        return "Off"
     if isinstance(spec, dict) and spec.get("find_color"):
         if not model.setting("allow_screen_read"):
             return "Off (opt-in)"
@@ -1869,10 +1889,10 @@ class MainWindow(_Tk):
         ttk.Label(left, text="Groups on / off").pack(anchor="w")
         self.groups_frame = ttk.Frame(left); self.groups_frame.pack(anchor="w", fill="y", pady=(2, 0))
         right = ttk.Frame(t); right.pack(side="left", fill="both", expand=True)
-        cols = ("phrase", "action", "group", "status")
+        cols = ("on", "phrase", "action", "group", "status")
         tf = ttk.Frame(right); tf.pack(fill="both", expand=True)
         self.tree = ttk.Treeview(tf, columns=cols, show="headings", selectmode="browse")
-        for c, w, txt in (("phrase", 160, "Say"), ("action", 290, "Action"), ("group", 150, "Group"),
+        for c, w, txt in (("on", 40, "On"), ("phrase", 160, "Say"), ("action", 290, "Action"), ("group", 150, "Group"),
                           ("status", 120, "On/Off")):
             self.tree.heading(c, text=txt); self.tree.column(c, width=w, anchor="w")
         sb = ttk.Scrollbar(tf, command=self.tree.yview)
@@ -1881,11 +1901,15 @@ class MainWindow(_Tk):
         self.tree.tag_configure("off", foreground=COL["dim"])
         self.tree.tag_configure("warn", foreground=COL["warn"])
         self.tree.bind("<Double-1>", lambda e: self.edit_command())
+        self.tree.bind("<Button-1>", self._tree_click, add="+")
         bb = ttk.Frame(right); bb.pack(fill="x", pady=(8, 0))
         for txt, cmd in (("Add", self.add_command), ("Edit", self.edit_command),
                          ("Duplicate", self.duplicate_command), ("Delete", self.delete_command)):
             ttk.Button(bb, text=txt, command=cmd).pack(side="left", padx=(0, 6))
         ttk.Button(bb, text="Test selected (3 s)", command=self.test_command).pack(side="right")
+        ttk.Button(bb, text="Turn on / off", command=self.toggle_command).pack(side="left", padx=(12, 6))
+        ttk.Label(bb, text="Tip: click the box in the On column. Off = can't be heard at all (fewer false triggers).",
+                  style="Dim.TLabel").pack(side="left")
         self._build_practice(right)
 
     # ------------------------------------------------------------------ practice (sends nothing)
@@ -2278,7 +2302,8 @@ class MainWindow(_Tk):
             self._iid_map[iid] = (g, p)
             alts = spec_alternates(spec)
             say = p + (f"  (also: {', '.join(alts)})" if alts else "")
-            self.tree.insert("", "end", iid=iid, values=(say, describe_spec(spec), g, st), tags=(tag,))
+            box = "\u2611" if self.model.command_enabled(g, p) else "\u2610"
+            self.tree.insert("", "end", iid=iid, values=(box, say, describe_spec(spec), g, st), tags=(tag,))
             if sel == (g, p):
                 self.tree.selection_set(iid); self.tree.see(iid)
 
@@ -2583,6 +2608,24 @@ class MainWindow(_Tk):
         self.mode_hint.configure(text=hint)
 
     # ------------------------------------------------------------------ commands tab
+    def _tree_click(self, e):
+        if self.tree.identify_region(e.x, e.y) == "cell" and self.tree.identify_column(e.x) == "#1":
+            iid = self.tree.identify_row(e.y)
+            if iid in self._iid_map:
+                self.tree.selection_set(iid)
+                self.toggle_command()
+                return "break"
+
+    def toggle_command(self):
+        sel = self.selected()
+        if not sel:
+            return
+        g, p = sel
+        on = not self.model.command_enabled(g, p)
+        self.model.set_command_enabled(g, p, on)
+        self.add_log(f"'{p}' turned {'ON' if on else 'OFF'} (speech list rebuilt)", "setup")
+        self.refresh_commands(); self.schedule_restart()
+
     def _group_toggled(self, g):
         self.model.set_group_enabled(g, self.group_vars[g].get())
         self.refresh_commands(); self.schedule_restart()

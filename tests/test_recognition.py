@@ -42,7 +42,7 @@ class TestConfidence(unittest.TestCase):
         self.assertEqual(app.rec.calls, [("key", (), "d")])
 
     def test_threshold_setting(self):
-        self.assertEqual(ev.DEFAULT_SETTINGS["min_confidence"], 0.55)
+        self.assertEqual(ev.DEFAULT_SETTINGS["min_confidence"], 0.7)
         app, *_ = make_app(min_confidence=0.5)
         self.assertIsNotNone(app.handle_text("warp", 0.62))
         with self.assertRaises(ev.ConfigError):

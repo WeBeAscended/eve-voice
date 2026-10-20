@@ -1,8 +1,8 @@
 {
-  "version": "1.0.2",
-  "url": "eve-voice-1.0.2.zip",
-  "sha256": "a2901f11f0a56cfc36a572b82cb3410e4c2918de7798e1d2a0c535f49ca87186",
-  "size": 164014,
-  "notes": "Hold + click fix: held key now stays down until the click is finished (down and up) plus a short settle so EVE sees both; app's own 'gate' click no longer lets go too early; focus blips and partial mishears no longer release a hold; every hold logs why it ended",
+  "version": "1.0.3",
+  "url": "eve-voice-1.0.3.zip",
+  "sha256": "95de8cbd0e807a5d6aadfa79c4775c371f99761082f1af8b213a29d1528b7ca1",
+  "size": 166239,
+  "notes": "Trimmed to core commands; others can be switched back on in Commands",
   "min_updater_version": 1
 }
